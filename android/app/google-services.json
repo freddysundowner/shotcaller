@@ -1,0 +1,56 @@
+{
+  "project_info": {
+    "project_number": "204503351292",
+    "firebase_url": "https://chatapp2-cab6a.firebaseio.com",
+    "project_id": "chatapp2-cab6a",
+    "storage_bucket": "chatapp2-cab6a.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:204503351292:android:8223d5f5129ea586213c79",
+        "android_client_info": {
+          "package_name": "com.shotcaller"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "204503351292-g2ekrdep8i2t9vq2ob334bmj9mgv8q1m.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.shotcaller",
+            "certificate_hash": "3706e009efc31727ef84d4b62179689c5f3990a8"
+          }
+        },
+        {
+          "client_id": "204503351292-o9ga75f0ae4s0254ppj0blrdoea1ftqg.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.shotcaller",
+            "certificate_hash": "6ccc98a100b5bb4afea0f59a26a5504d852eb170"
+          }
+        },
+        {
+          "client_id": "204503351292-fpn6br8kh78nosj92tq19icklt8658mp.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBWVhtuXesd9HhZFNit4dfnciNJEIwEE8I"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "204503351292-fpn6br8kh78nosj92tq19icklt8658mp.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
