@@ -51,7 +51,11 @@ class AuthService {
       if(userModel == null){
         Get.to(() => UsernamePage());
       }else{
-        Get.to(() => StartCall());
+        if(userModel.usertype == "admin"){
+          Get.to(() => Admin());
+        }else{
+          Get.to(() => StartCall());
+        }
       }
 
     } else {

@@ -77,7 +77,7 @@ class _OtpScreenState extends State<OtpScreen> {
               SizedBox(
                 height: 40,
               ),
-              logoWidget(),
+              // logoWidget(),
               SizedBox(
                 height: 80,
               ),

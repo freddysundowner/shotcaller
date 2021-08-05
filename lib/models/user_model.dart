@@ -12,10 +12,14 @@ class UserModel {
    bool stared;
    bool blocked;
    File imagefile;
+   String countrycode;
+   String countryname;
 
   UserModel({
     this.uid,
     this.firebasetoken,
+    this.countryname,
+    this.countrycode,
     this.usertype,
     this.blocked,
     this.stared,
@@ -35,6 +39,8 @@ class UserModel {
          "stared": this.stared == true ? this.stared : stared ,
          "usertype": usertype,
          "username": username,
+         "countrycode": countrycode,
+         "countryname": countryname,
          "phonenumber": phonenumber,
        };
    }
@@ -46,6 +52,8 @@ class UserModel {
       stared: json['stared'],
       blocked: json['blocked'],
       username: json['username'],
+      countryname: json['countryname'],
+      countrycode: json['countrycode'],
       uid: json['uid'],
       usertype: json['usertype'],
       phonenumber: json['phonenumber'],

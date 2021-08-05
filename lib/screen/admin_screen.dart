@@ -1,10 +1,12 @@
 import 'dart:async';
 
 import 'package:agora_rtc_engine/rtc_engine.dart';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/painting.dart';
 import 'package:get/get.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shotcaller/controllers/controllers.dart';
@@ -28,12 +30,11 @@ class _AdminState extends State<Admin> {
   RtcEngine engine;
   List<Room> rooms = [];
   Room activeroom;
-  String activecallusername = "";
+  String activecallusername = "No Active Call";
   bool loading = true;
-  bool mute = true;
+  bool mute = false;
   UserModel cuser;
-
-
+  var calllimitcontroller = TextEditingController();
 
   // int timerMaxSeconds = 240;
   // int timerMaxSeconds = 20;
@@ -41,12 +42,13 @@ class _AdminState extends State<Admin> {
   bool hotline = true;
   int currentSeconds = 0;
   Timer timer;
-  String settingsid = "";
+  String settingsid = "", callslimit= "";
 
   int extendedtime = 0;
 
-  String get timerText => '${((currentSeconds) ~/ 60).toString().padLeft(2, '0')}: ${((currentSeconds) % 60).toString().padLeft(2, '0')}';
+  String txt = "";
 
+  String get timerText => '${((currentSeconds) ~/ 60).toString().padLeft(2, '0')}: ${((currentSeconds) % 60).toString().padLeft(2, '0')}';
 
   @override
   void initState() {
@@ -54,23 +56,54 @@ class _AdminState extends State<Admin> {
     initialize();
     settingsRef.snapshots().listen((event) {
       settingsid = event.docs[0].id;
-      hotline =event.docs[0].data()["hotlineoffline"];
-      setState(() {
-
-      });
+      hotline = event.docs[0].data()["hotlineoffline"];
+      var tim = event.docs[0].data()["callslimit"];
+      callslimit = '${((tim) ~/ 60).toString().padLeft(2, '0')}: ${((tim) % 60).toString().padLeft(2, '0')}';
+      setState(() {});
     });
+  }
+
+  checkLimitsColors() {
+    if (currentSeconds == 0 ||
+        activeroom == null) return Colors.grey;
+    int time1 = (activeroom.time - currentSeconds);
+    if (currentSeconds < activeroom.time / 2) {
+      return Colors.green;
+    } else if (currentSeconds > activeroom.time / 2) {
+      if (time1 != 0 && time1 <= activeroom.time / 3) {
+        print("time1 ${time1}");
+        return Colors.red;
+      } else {
+        print("bbb");
+        return Colors.amber;
+      }
+    }
   }
 
   toggleAudio() {
     mute = !mute;
     engine.muteLocalAudioStream(mute);
+    roomsRef.doc(activeroom.roomid).update({"muted": mute});
     setState(() {});
+  }
+
+  static AudioCache player = new AudioCache();
+
+  void addedTimeNofier() {
+    const alarmAudioPath = "sounds/seconds_addedc.mp3";
+    player.play(alarmAudioPath);
+    var snackBar = SnackBar(
+      content: Text("New Caller in Queue"),
+      backgroundColor: Colors.green,
+    );
+    ScaffoldMessenger.of(context).showSnackBar(snackBar);
   }
 
   callInit() async {
     calllistener = await roomsRef.snapshots().listen((event) {
-      print("callInit "+currentSeconds.toString());
-      print(event.docs.length.toString());
+      if (event.docs.length > rooms.length && activeroom ==null) {
+        addedTimeNofier();
+      }
       rooms.clear();
       if (event.docs.length > 0) {
         event.docs.forEach((element) {
@@ -111,7 +144,9 @@ class _AdminState extends State<Admin> {
         cuser = activeroom.users[
             activeroom.users.indexWhere((element) => element.uid != user.uid)];
         await engine.joinChannel(rooms.first.token, rooms.first.owner, null, 0);
-        roomsRef.doc(activeroom.roomid).update({"currentstatus": "ongoing","status":"active"});
+        roomsRef
+            .doc(activeroom.roomid)
+            .update({"currentstatus": "ongoing", "status": "active"});
         print("b");
       } else {
         activecallusername = "No Active Call";
@@ -122,8 +157,6 @@ class _AdminState extends State<Admin> {
       });
     }
   }
-
-
 
   rejectCall(Room room) {
     roomsRef.doc(room.roomid).delete();
@@ -137,6 +170,7 @@ class _AdminState extends State<Admin> {
       // timerMaxSeconds = 0;
     });
   }
+
   /// Create Agora SDK instance and initialize
   Future<void> initialize() async {
     await _initAgoraRtcEngine();
@@ -189,21 +223,76 @@ class _AdminState extends State<Admin> {
         },
         audioVolumeIndication:
             (List<AudioVolumeInfo> speakers, int totalVolume) {},
-        remoteAudioStats: (RemoteAudioStats remoteAudioStats) {
-
-        },rtcStats: (RtcStats rtcStats){
+        remoteAudioStats: (RemoteAudioStats remoteAudioStats) {},
+        rtcStats: (RtcStats rtcStats) {
           print(rtcStats.totalDuration);
           setState(() {
             currentSeconds = rtcStats.totalDuration;
           });
-          if (currentSeconds >= activeroom.time) {
+          if (activeroom != null && currentSeconds >= activeroom.time) {
             print("leaving four");
             leaveChannel();
           }
-    }
-    ));
+        }));
   }
+  _showDialog() async {
+    await showDialog<String>(
+      context: context,
+      builder: (ct){
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return new AlertDialog(
+              contentPadding: const EdgeInsets.all(16.0),
+              content: new Row(
+                children: <Widget>[
+                  new Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        new TextField(
+                          autofocus: true,
+                          controller: calllimitcontroller,
+                          keyboardType: TextInputType.number,
+                          decoration: new InputDecoration(
+                              labelText: 'Call Time Limit(seconds)', hintText: 'eg. 240'),
+                        ),
+                        if(txt.isNotEmpty) Text(txt, style: TextStyle(color: Colors.red),)
+                      ],
+                    ),
+                  )
+                ],
+              ),
+              actions: <Widget>[
+                new FlatButton(
+                    child: const Text('CANCEL'),
+                    onPressed: () {
+                      Navigator.pop(context);
+                    }),
+                new FlatButton(
+                    child: const Text('SAVE'),
+                    onPressed: () {
+                      txt = "";
+                      if(calllimitcontroller.text.isEmpty){
+                        txt = "enter amount of seconds first";
+                        setState(() {
 
+                        });
+                      }else{
+                        Navigator.pop(context);
+                        settingsRef.doc(settingsid).update({
+                          "callslimit" : int.parse(calllimitcontroller.text)
+                        });
+                        calllimitcontroller.text = "";
+                      }
+
+                    })
+              ],
+            );
+          }
+        );
+      },
+    );
+  }
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -217,6 +306,9 @@ class _AdminState extends State<Admin> {
               )
             : Column(
                 children: [
+                  SizedBox(
+                    height: 10,
+                  ),
                   Row(
                     children: [
                       IconButton(
@@ -227,7 +319,7 @@ class _AdminState extends State<Admin> {
                       Expanded(
                         flex: 1,
                         child: Center(
-                          child: logoWidget(sz1: 30, sz2: 12,from: "home"),
+                          child: logoWidget(sz1: 200, sz2: 12, from: "home"),
                         ),
                       ),
                     ],
@@ -258,7 +350,7 @@ class _AdminState extends State<Admin> {
                                             Expanded(
                                               child: Center(
                                                 child: Text(
-                                                  '4:00 Minutes',
+                                                  '$callslimit Minutes',
                                                   style: TextStyle(
                                                       color: Colors.white,
                                                       fontWeight:
@@ -266,29 +358,34 @@ class _AdminState extends State<Admin> {
                                                 ),
                                               ),
                                             ),
-                                            Container(
-                                              width: 70,
-                                              height: 30,
-                                              decoration: BoxDecoration(
-                                                  border: Border.all(
-                                                    color: Colors
-                                                        .white38, // red as border color
-                                                  ),
-                                                  gradient: LinearGradient(
-                                                    colors: [
-                                                      Colors.green,
-                                                      Colors.green,
-                                                    ],
-                                                  ),
-                                                  borderRadius:
-                                                      BorderRadius.all(
-                                                    Radius.circular(50),
-                                                  )),
-                                              child: Center(
-                                                child: Text(
-                                                  'Edit',
-                                                  style: TextStyle(
-                                                    color: Colors.white,
+                                            InkWell(
+                                              onTap: (){
+                                                _showDialog();
+                                              },
+                                              child: Container(
+                                                width: 70,
+                                                height: 30,
+                                                decoration: BoxDecoration(
+                                                    border: Border.all(
+                                                      color: Colors
+                                                          .white38, // red as border color
+                                                    ),
+                                                    gradient: LinearGradient(
+                                                      colors: [
+                                                        Colors.green,
+                                                        Colors.green,
+                                                      ],
+                                                    ),
+                                                    borderRadius:
+                                                        BorderRadius.all(
+                                                      Radius.circular(50),
+                                                    )),
+                                                child: Center(
+                                                  child: Text(
+                                                    'Edit',
+                                                    style: TextStyle(
+                                                      color: Colors.white,
+                                                    ),
                                                   ),
                                                 ),
                                               ),
@@ -397,7 +494,9 @@ class _AdminState extends State<Admin> {
                                                       ),
                                                       color: Colors.red),
                                                   child: Text(
-                                                    hotline == true ? "Off Air" : "On Air",
+                                                    hotline == true
+                                                        ? "Off Air"
+                                                        : "On Air",
                                                     style: TextStyle(
                                                         color: Colors.white),
                                                   ),
@@ -673,81 +772,96 @@ class _AdminState extends State<Admin> {
   }
 
   enableHotline() {
-    return InkWell(
-      onTap: (){
-
-        showDialog(
-          context: context,
-          builder: (context) {
-            return Dialog(
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20)),
-              elevation: 16,
-              child: Container(
-                width: 150,
-                child: ListView(
-                  shrinkWrap: true,
-                  children: <Widget>[
-                    SizedBox(height: 20),
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Center(
-                        child: Text(
-                          "Are you sure you want to ${hotline == false ? 'Close hotline' : 'Open hotline'}",
-                          style: TextStyle(fontSize: 21, color: hotline == false ? Colors.red : Colors.black),
-                        ),
-                      ),
-                    ),
-                    SizedBox(height: 20),
-                    Container(
-                      padding: EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 10),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          InkWell(
-                            onTap: () {
-                              Navigator.pop(context);
-                              settingsRef.doc(settingsid).update({"hotlineoffline" : !hotline});
-                            },
-                            child: Text(
-                              'Yes',
-                              style:
-                              TextStyle(fontSize: 16, color: Colors.green),
+    return Row(
+      children: [
+        Expanded(
+          child: InkWell(
+            onTap: () {
+              showDialog(
+                context: context,
+                builder: (context) {
+                  return Dialog(
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20)),
+                    elevation: 16,
+                    child: Container(
+                      width: 150,
+                      child: ListView(
+                        shrinkWrap: true,
+                        children: <Widget>[
+                          SizedBox(height: 20),
+                          Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Center(
+                              child: Text(
+                                "Are you sure you want to ${hotline == false ? 'Close hotline' : 'Open hotline'}",
+                                style: TextStyle(
+                                    fontSize: 21,
+                                    color: hotline == false
+                                        ? Colors.red
+                                        : Colors.black),
+                                textAlign: TextAlign.center,
+                              ),
                             ),
                           ),
-                          InkWell(
-                            onTap: () {
-                              Navigator.pop(context);
-
-                            },
-                            child: Text(
-                              'No',
-                              style: TextStyle(fontSize: 16, color: Colors.red),
+                          SizedBox(height: 20),
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 20, vertical: 10),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                InkWell(
+                                  onTap: () {
+                                    Navigator.pop(context);
+                                    settingsRef
+                                        .doc(settingsid)
+                                        .update({"hotlineoffline": !hotline});
+                                  },
+                                  child: Text(
+                                    'Yes',
+                                    style: TextStyle(
+                                        fontSize: 16, color: Colors.green),
+                                  ),
+                                ),
+                                InkWell(
+                                  onTap: () {
+                                    Navigator.pop(context);
+                                  },
+                                  child: Text(
+                                    'No',
+                                    style: TextStyle(
+                                        fontSize: 16, color: Colors.red),
+                                  ),
+                                )
+                              ],
                             ),
                           )
                         ],
                       ),
-                    )
-                  ],
+                    ),
+                  );
+                },
+              );
+            },
+            child: Row(
+              children: [
+                Text(
+                  'Hotline: ',
+                  style: TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold),
                 ),
-              ),
-            );
-          },
-        );
-      },
-      child: Row(
-        children: [
-          Text(
-            'Hotline: ',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                Text(
+                  hotline == false ? 'Close' : "Open",
+                  style: TextStyle(
+                      color: hotline == false ? Colors.red : Colors.green,
+                      fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
           ),
-          Text(
-            hotline ==false ? 'Close' : "Open",
-            style: TextStyle(color: hotline ==false ? Colors.red : Colors.green, fontWeight: FontWeight.bold),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -811,18 +925,58 @@ class _AdminState extends State<Admin> {
               color: cuser != null && cuser.stared == true
                   ? Colors.amber
                   : Colors.black,
-              size: 35,
+              size: 40,
             ),
           ),
+        ),
+        SizedBox(
+          width: 10,
+        ),
+        Container(
+          height: 40,
+          width: 40,
+          decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(60),
+              border: Border.all(
+                  width: 1.0,
+                  color: activeroom == null || activeroom.muted == false
+                      ? Colors.white
+                      : Colors.green)),
+          child: IconButton(
+            onPressed: () async {
+              if(activeroom !=null){
+                toggleAudio();
+              }
+
+            },
+            icon: activeroom == null || activeroom.muted == false
+                ? Icon(
+                    CupertinoIcons.speaker_slash_fill,
+                    size: 20,
+                    color: Colors.white,
+                  )
+                : Icon(
+                    CupertinoIcons.speaker_1_fill,
+                    size: 20,
+                    color:
+                        activeroom.muted == true ? Colors.green : Colors.white,
+                  ),
+          ),
+        ),
+        SizedBox(
+          width: 10,
         ),
         Container(
           decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(60), color: Colors.grey),
           child: InkWell(
-            onTap: (){
-              if(activeroom !=null) {
-                 extendedtime +=30;
-                roomsRef.doc(activeroom.roomid).update({"time": activeroom.time + 30,"extendedtime": extendedtime} );
+            onTap: () {
+              if (activeroom != null) {
+                extendedtime += 30;
+                roomsRef.doc(activeroom.roomid).update({
+                  "time": activeroom.time + 30,
+                  "extendedtime": extendedtime
+                });
               }
             },
             child: Column(
@@ -857,7 +1011,7 @@ class _AdminState extends State<Admin> {
               borderRadius: BorderRadius.circular(60), color: Colors.red),
           child: IconButton(
             onPressed: () {
-              if(activeroom !=null){
+              if (activeroom != null) {
                 showDialog(
                   context: context,
                   builder: (context) {
@@ -873,15 +1027,16 @@ class _AdminState extends State<Admin> {
                             SizedBox(height: 20),
                             Center(
                                 child: Text(
-                                  'Are you sure you want to end the call?',
-                                  style: TextStyle(fontSize: 21),
-                                )),
+                                    'Are you sure you want to end the call?',
+                                    style: TextStyle(fontSize: 21),
+                                    textAlign: TextAlign.center)),
                             SizedBox(height: 20),
                             Container(
-                              padding:
-                              EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: 20, vertical: 10),
                               child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceEvenly,
                                 children: [
                                   InkWell(
                                     onTap: () {
@@ -890,8 +1045,8 @@ class _AdminState extends State<Admin> {
                                     },
                                     child: Text(
                                       'No',
-                                      style:
-                                      TextStyle(fontSize: 16, color: Colors.green),
+                                      style: TextStyle(
+                                          fontSize: 16, color: Colors.green),
                                     ),
                                   ),
                                   InkWell(
@@ -901,7 +1056,8 @@ class _AdminState extends State<Admin> {
                                     },
                                     child: Text(
                                       'Yes',
-                                      style: TextStyle(fontSize: 16, color: Colors.red),
+                                      style: TextStyle(
+                                          fontSize: 16, color: Colors.red),
                                     ),
                                   )
                                 ],
@@ -926,7 +1082,7 @@ class _AdminState extends State<Admin> {
           decoration: BoxDecoration(borderRadius: BorderRadius.circular(60)),
           child: IconButton(
             onPressed: () {
-              if(activeroom !=null){
+              if (activeroom != null) {
                 showDialog(
                   context: context,
                   builder: (context) {
@@ -942,18 +1098,19 @@ class _AdminState extends State<Admin> {
                             SizedBox(height: 20),
                             Center(
                                 child: Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    'Are you sure you want to block ${cuser.username}?',
-                                    style: TextStyle(fontSize: 21),
-                                  ),
-                                )),
+                              padding: const EdgeInsets.all(8.0),
+                              child: Text(
+                                'Are you sure you want to block ${cuser.username}?',
+                                style: TextStyle(fontSize: 21),
+                              ),
+                            )),
                             SizedBox(height: 20),
                             Container(
-                              padding:
-                              EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: 20, vertical: 10),
                               child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceEvenly,
                                 children: [
                                   InkWell(
                                     onTap: () {
@@ -961,19 +1118,22 @@ class _AdminState extends State<Admin> {
                                     },
                                     child: Text(
                                       'No',
-                                      style:
-                                      TextStyle(fontSize: 16, color: Colors.green),
+                                      style: TextStyle(
+                                          fontSize: 16, color: Colors.green),
                                     ),
                                   ),
                                   InkWell(
                                     onTap: () {
                                       Navigator.pop(context);
-                                      usersRef.doc(cuser.uid).update({"blocked": true});
+                                      usersRef
+                                          .doc(cuser.uid)
+                                          .update({"blocked": true});
                                       leaveChannel();
                                     },
                                     child: Text(
                                       'Yes',
-                                      style: TextStyle(fontSize: 16, color: Colors.red),
+                                      style: TextStyle(
+                                          fontSize: 16, color: Colors.red),
                                     ),
                                   )
                                 ],
@@ -1008,14 +1168,14 @@ class _AdminState extends State<Admin> {
             Text(
               activeroom == null ? "0:00" : timerText,
               style: TextStyle(
-                color: Colors.red,
+                color: checkLimitsColors(),
                 fontWeight: FontWeight.bold,
                 fontSize: 35,
               ),
             ),
             Text(
               'Time used',
-              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+              style: TextStyle(color: checkLimitsColors(), fontWeight: FontWeight.bold),
             ),
           ],
         ),
@@ -1034,7 +1194,9 @@ class _AdminState extends State<Admin> {
         Column(
           children: [
             Text(
-    activeroom == null ? "4:00" : '${((activeroom.time) ~/ 60).toString().padLeft(2, '0')}: ${((activeroom.time) % 60).toString().padLeft(2, '0')}',
+              activeroom == null
+                  ? "${callslimit}"
+                  : '${((activeroom.time) ~/ 60).toString().padLeft(2, '0')}: ${((activeroom.time) % 60).toString().padLeft(2, '0')}',
               style: TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,

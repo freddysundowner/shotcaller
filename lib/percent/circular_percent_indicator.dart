@@ -65,6 +65,7 @@ class CircularPercentIndicator extends StatefulWidget {
 
   ///the angle which the circle will start the progress (in degrees, eg: 0.0, 45.0, 90.0)
   final double startAngle;
+  final double totaltime;
 
   /// set true if you want to animate the linear from the last percent value you set
   final bool animateFromLastPercent;
@@ -103,6 +104,7 @@ class CircularPercentIndicator extends StatefulWidget {
   CircularPercentIndicator({
     Key key,
     this.percent = 0.0,
+    this.totaltime = 0.0,
     this.lineWidth = 5.0,
     this.startAngle = 0.0,
      this.radius,
@@ -134,7 +136,7 @@ class CircularPercentIndicator extends StatefulWidget {
       throw ArgumentError(
           'Cannot provide both linearGradient and progressColor');
     }
-    _progressColor = progressColor ?? Colors.red;
+    _progressColor = progressColor ?? Colors.amber;
 
     assert(startAngle >= 0.0);
     // if (percent < 0.0 || percent > 1.0) {
@@ -244,7 +246,7 @@ class _CircularPercentIndicatorState extends State<CircularPercentIndicator>
           children: [
             CustomPaint(
               painter: CirclePainter(
-                progress: _percent*1.5,
+                progress: _percent * (360/widget.totaltime),
                 progressColor: widget.progressColor,
                 backgroundColor: widget.backgroundColor,
                 startAngle: widget.startAngle,

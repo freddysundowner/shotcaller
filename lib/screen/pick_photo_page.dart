@@ -29,6 +29,16 @@ class _PickPhotoPageState extends State<PickPhotoPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: ThemeColor1,
+      appBar: AppBar(
+        elevation: 0,
+        backgroundColor: ThemeColor1,
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            buildActionButton(context)
+          ],
+        ),
+      ),
       body: SafeArea(
         child: loading == true ? Loading() :Container(
           alignment: Alignment.center,
@@ -63,14 +73,22 @@ class _PickPhotoPageState extends State<PickPhotoPage> {
         horizontal: 20,
       ),
       child: GestureDetector(
-        onTap: () {
+        onTap: () async {
+          setState(() {
+            error = "";
+            loading = true;
+          });
+          await Database().createUserInfo(FirebaseAuth.instance.currentUser.uid);
 
+          setState(() {
+            loading = false;
+          });
         },
         child: Text(
           'Skip',
           style: TextStyle(
-            color: Colors.grey,
-            fontWeight: FontWeight.bold,
+            color: Colors.white,
+            fontSize: 16
           ),
         ),
       ),

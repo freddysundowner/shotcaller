@@ -15,6 +15,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "204503351292-1l9d4vlh4qitb5ktt0avqbt6cffppofo.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.shotcaller",
+            "certificate_hash": "b1fd654865ed157d250e66a5a39ed8efa262d0f5"
+          }
+        },
+        {
           "client_id": "204503351292-g2ekrdep8i2t9vq2ob334bmj9mgv8q1m.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {

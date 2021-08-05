@@ -29,7 +29,6 @@ class _UsernamePageState extends State<UsernamePage> {
         ),
         child: Column(
           children: [
-            logoWidget(),
             SizedBox(
               height: 50,
             ),

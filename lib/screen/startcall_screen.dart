@@ -2,12 +2,11 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:agora_rtc_engine/rtc_engine.dart';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_tts/flutter_tts.dart';
 import 'package:get/get.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shotcaller/controllers/controllers.dart';
@@ -19,8 +18,9 @@ import 'package:shotcaller/shared/configs.dart';
 import 'package:shotcaller/slider/src/slider.dart';
 import 'package:shotcaller/utils/firebase_refs.dart';
 import 'package:shotcaller/widgets/common_widgets.dart';
-import 'admin.dart';
 import 'package:shotcaller/percent/percent_indicator.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'admin_screen.dart';
 
 class StartCall extends StatefulWidget {
   @override
@@ -32,81 +32,26 @@ enum TtsState { playing, stopped }
 class _StartCallState extends State<StartCall> with WidgetsBindingObserver {
   UserModel user = Get.find<UserController>().user;
   bool callwaiting = false;
-  bool loading = true;
+  bool loading = false;
   String statustxt = "";
   Room room;
-  StreamSubscription<QuerySnapshot> calllistener;
+  StreamSubscription<DocumentSnapshot> calllistener;
   RtcEngine engine;
   int tt = 0;
   bool mute = false;
   bool recording = false;
   bool speaker = false;
 
-  // int timerMaxSeconds = 240;
-  // int timerMaxSeconds = 20;
   bool timeextended = false;
-  int currentSeconds = 0;
-  FlutterTts flutterTts = FlutterTts();
-  String language;
-  double volume = 0.5;
-  double pitch = 1.0;
-  double rate = 0.5;
-
-  TtsState ttsState = TtsState.stopped;
-
-  get isPlaying => ttsState == TtsState.playing;
-
-  get isStopped => ttsState == TtsState.stopped;
-
-  String get timerText =>
-      '${((currentSeconds) ~/ 60).toString().padLeft(2, '0')}: ${((currentSeconds) % 60).toString().padLeft(2, '0')}';
+  int currentSeconds = 0, callslimit = 0;
 
   @override
   void initState() {
     super.initState();
-    // initialize();
     initialize();
-    callSpeechInit();
-  }
-
-  Future _speak() async {
-    await flutterTts.setVolume(volume);
-    await flutterTts.setSpeechRate(rate);
-    await flutterTts.setPitch(pitch);
-
-    if (statustxt != null) {
-      if (statustxt.isNotEmpty) {
-        var result = await flutterTts.speak(statustxt);
-        if (result == 1) setState(() => ttsState = TtsState.playing);
-      }
-    }
-  }
-
-  Future _stop() async {
-    var result = await flutterTts.stop();
-    if (result == 1) setState(() => ttsState = TtsState.stopped);
-  }
-
-  callSpeechInit() {
-    flutterTts.setStartHandler(() {
-      setState(() {
-        print("playing");
-        ttsState = TtsState.playing;
-      });
-    });
-
-    flutterTts.setCompletionHandler(() {
-      setState(() {
-        print("Complete");
-        ttsState = TtsState.stopped;
-      });
-    });
-
-    flutterTts.setErrorHandler((msg) {
-      setState(() {
-        print("error: $msg");
-        ttsState = TtsState.stopped;
-      });
+    settingsRef.snapshots().listen((event) {
+      callslimit = event.docs[0].data()["callslimit"];
+      setState(() {});
     });
   }
 
@@ -117,53 +62,62 @@ class _StartCallState extends State<StartCall> with WidgetsBindingObserver {
     callInit();
   }
 
-  callInit() async {
-    calllistener = await roomsRef
-        .where("owner", isEqualTo: user.uid)
+  static AudioCache player = new AudioCache();
+
+  callInit() {
+    print("callInit");
+    calllistener = roomsRef
+        .doc(user.uid)
         .snapshots()
         .listen((event) async {
-      print("callInit ${event.docs.length}");
-      if (event.docs.length > 0) {
-        event.docs.forEach((element) async {
-          room = Room.fromJson(element);
-          if (room.status == "active") {
-            await engine.leaveChannel();
-            await engine.joinChannel(room.token, room.owner, null, 0);
-            setState(() {
-              loading = false;
-              callwaiting = false;
-              statustxt = "On call";
-            });
-          } else if (room.status == "waiting") {
-            // _speak();
-            setState(() {
-              loading = false;
-              callwaiting = true;
-              statustxt = "Waiting on call";
-            });
-            // _stop();
+      print("callInit ${event}");
+      if (event.exists) {
+        if (room != null) {
+          if (room.extendedtime < event.data()["extendedtime"]) {
+            addedTimeNofier();
           }
-        });
+        }
+
+        room = Room.fromJson(event);
+        print("room data ${room.roomid}");
+        if (room.status == "active") {
+          await engine.joinChannel(room.token, room.owner, null, 0);
+        }
+        if (room.status == "waiting") {
+          callwaiting = true;
+          statustxt = "Waiting on call";
+        }
+        setState(() {});
       } else {
         leaveChannel();
-        setState(() {
-          loading = false;
-        });
       }
     });
+  }
+
+  void addedTimeNofier() {
+    const alarmAudioPath = "sounds/seconds_added.mp3";
+    player.play(alarmAudioPath);
+    var snackBar = SnackBar(
+      content: Text("+30 seconds added"),
+      backgroundColor: Colors.green,
+    );
+    ScaffoldMessenger.of(context).showSnackBar(snackBar);
   }
 
   Future<void> leaveChannel() async {
     await engine.leaveChannel();
     if (room != null) {
       roomsRef.doc(room.roomid).delete();
-      setState(() {
-        room = null;
-        statustxt = "";
-        callwaiting = false;
-        currentSeconds = 0;
-      });
     }
+    setState(() {
+      room = null;
+      statustxt = "";
+      callwaiting = false;
+      currentSeconds = 0;
+      secondsNotifier.value = 0;
+    });
+    // checkLimitsColors();
+    print("room " + room.toString());
   }
 
   //init agora sdk
@@ -182,6 +136,9 @@ class _StartCallState extends State<StartCall> with WidgetsBindingObserver {
     }
   }
 
+  ValueNotifier<int> secondsNotifier = ValueNotifier(null);
+  ValueNotifier<Color> colorRing = ValueNotifier(null);
+
   /// Add Agora event handlers
   void _addAgoraEventHandlers() {
     engine.setEventHandler(RtcEngineEventHandler(
@@ -192,6 +149,10 @@ class _StartCallState extends State<StartCall> with WidgetsBindingObserver {
         },
         joinChannelSuccess: (channel, uid, elapsed) async {
           print('onJoinChannel: $channel, uid: $uid');
+          setState(() {
+            callwaiting = false;
+            statustxt = "On call";
+          });
         },
         leaveChannel: (stats) {
           print("leaving one");
@@ -212,14 +173,16 @@ class _StartCallState extends State<StartCall> with WidgetsBindingObserver {
         remoteAudioStats: (RemoteAudioStats remoteAudioStats) {},
         rtcStats: (RtcStats rtcStats) {
           print(rtcStats.totalDuration);
-          setState(() {
-            currentSeconds = rtcStats.totalDuration;
-          });
-          if (room != null) {
-            if (currentSeconds >= room.time) {
-              print("leaving four");
-              leaveChannel();
-            }
+          secondsNotifier.value = rtcStats.totalDuration;
+          if((room.time/2) < rtcStats.totalDuration){
+            colorRing.value = Colors.green;
+          }
+          if((room.time/2) > rtcStats.totalDuration){
+            colorRing.value = Colors.red;
+          }
+          if (room != null && rtcStats.totalDuration >= room.time) {
+            print("leaving four");
+            leaveChannel();
           }
         }));
   }
@@ -227,8 +190,6 @@ class _StartCallState extends State<StartCall> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-
-    flutterTts.stop();
     super.dispose();
   }
 
@@ -246,12 +207,13 @@ class _StartCallState extends State<StartCall> with WidgetsBindingObserver {
                 : Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.center,
-                    children: <Widget>[ SizedBox(
-                      height: 20,
-                    ),
-                        logoWidget(sz1: 30, sz2: 16, from: "home"),
+                    children: <Widget>[
                         SizedBox(
-                          height: 10,
+                          height: 20,
+                        ),
+                        logoWidget(sz1: 250, sz2: 16, from: "home"),
+                        SizedBox(
+                          height: 30,
                         ),
                         Text(
                           (statustxt.isNotEmpty
@@ -265,32 +227,76 @@ class _StartCallState extends State<StartCall> with WidgetsBindingObserver {
                         SizedBox(
                           height: 30,
                         ),
-                        CircularPercentIndicator(
-                          radius: 200,
-                          startAngle: 360,
-                          animateFromLastPercent: true,
-                          animation: true,
-                          animationDuration: 1200,
-                          addAutomaticKeepAlive: true,
-                          lineWidth: 20.0,
-                          percent: room != null
-                              ? (currentSeconds.toDouble() -
-                                          room.extendedtime) <
-                                      0
-                                  ? 0
-                                  : (currentSeconds.toDouble() -
-                                      room.extendedtime)
-                              : 0,
-                          center: new Text(
-                            "Soul Session",
-                            style: new TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16.0,
-                                color: Colors.orange),
-                          ),
-                          circularStrokeCap: CircularStrokeCap.round,
-                          backgroundColor: Colors.grey,
-                          progressColor: checkLimitsColors(),
+                        Stack(
+                          children: [
+                            Center(
+                              child: ValueListenableBuilder<int>(
+                                  valueListenable: secondsNotifier,
+                                  builder: (ctx, second, _) {
+                                    if (second == null) {
+                                      return CircularPercentIndicator(
+                                        radius: 200,
+                                        startAngle: 360,
+                                        animateFromLastPercent: true,
+                                        animation: true,
+                                        animationDuration: 1200,
+                                        addAutomaticKeepAlive: true,
+                                        lineWidth: 20.0,
+                                        percent: 0,
+                                        center: Image.asset(
+                                          'assets/images/soul_logo.png',
+                                          width: 150,
+                                          fit: BoxFit.cover,
+                                        ),
+                                        circularStrokeCap: CircularStrokeCap.round,
+                                        backgroundColor: Colors.grey,
+                                        progressColor: checkLimitsColors(),
+                                      );
+                                    }
+                                    return CircularPercentIndicator(
+                                      radius: 200,
+                                      startAngle: 360,
+                                      animateFromLastPercent: true,
+                                      animation: true,
+                                      totaltime:
+                                          room == null ? 240.0 : room.time.toDouble(),
+                                      animationDuration: 1200,
+                                      addAutomaticKeepAlive: true,
+                                      lineWidth: 20.0,
+                                      percent: room != null
+                                          ? (second.toDouble() - room.extendedtime) <
+                                                  0
+                                              ? 0
+                                              : (second.toDouble() -
+                                                  room.extendedtime)
+                                          : 0,
+                                      center: Image.asset(
+                                        'assets/images/soul_logo.png',
+                                        width: 150,
+                                        fit: BoxFit.cover,
+                                      ),
+                                      circularStrokeCap: CircularStrokeCap.round,
+                                      backgroundColor: Colors.grey,
+                                      progressColor: colorRing.value,
+                                    );
+                                  }),
+                            ),
+                            Positioned(
+                                child: InkWell(
+                                    onTap: () async{
+                                      const url = "https://flutter.io";
+                                      if (await canLaunch(url))
+                                        await launch(url);
+                                      else
+                                        // can't launch url, there is some error
+                                        throw "Could not launch $url";
+                                    },
+                                    child: Icon(Icons.info)
+                                ),
+                                top: 0,
+                                right: 110,
+                            )
+                          ],
                         ),
                         SizedBox(
                           height: 30,
@@ -302,15 +308,27 @@ class _StartCallState extends State<StartCall> with WidgetsBindingObserver {
   }
 
   checkLimitsColors() {
-    if (room == null) return Colors.white;
-    if (currentSeconds < room.time / 2) {
+    return Colors.green;
+    if (room != null && room.status == "waiting") {
+      secondsNotifier == null;
+    }
+    if (secondsNotifier == null || secondsNotifier.value == 0 || room == null) {
+      return Colors.grey;
+    }
+    else if (secondsNotifier.value > 0 &&
+        secondsNotifier.value < room.time / 2) {
       return Colors.green;
     }
-    if (currentSeconds > room.time / 2) {
-      return Colors.amber;
-    }
-    if (room.time - currentSeconds < room.time / 3) {
-      return Colors.red;
+    else if (secondsNotifier.value > 0 &&
+        secondsNotifier.value > room.time / 2) {
+      int time1 = (room.time - secondsNotifier.value);
+      if (time1 != 0 && time1 <= room.time / 3) {
+        print("time1 ${time1}");
+        return Colors.red;
+      } else {
+        print("bbb ${time1}");
+        return Colors.amber;
+      }
     }
   }
 
@@ -345,23 +363,12 @@ class _StartCallState extends State<StartCall> with WidgetsBindingObserver {
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Text(
-              room == null ? "0:00" : timerText,
-              style: TextStyle(
-                  color: Colors.grey,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 40),
-            ),
-            Text(
-              'Time used',
-              style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold),
-            ),
-          ],
-        ),
+        ValueListenableBuilder<int>(
+            valueListenable: secondsNotifier,
+            builder: (ctx, second, _) {
+              if (second == null) return timeUsedView(second);
+              return timeUsedView(second);
+            }),
         SizedBox(
           width: 10,
         ),
@@ -398,12 +405,39 @@ class _StartCallState extends State<StartCall> with WidgetsBindingObserver {
     );
   }
 
+  Column timeUsedView(int second) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Text(
+          room == null || second == null
+              ? "0:00"
+              : '${((second) ~/ 60).toString().padLeft(2, '0')}: ${((second) % 60).toString().padLeft(2, '0')}',
+          style: TextStyle(
+              color: checkLimitsColors(),
+              fontWeight: FontWeight.bold,
+              fontSize: 40),
+        ),
+        Text(
+          'Time used',
+          style: TextStyle(
+              color: checkLimitsColors(), fontWeight: FontWeight.bold),
+        ),
+      ],
+    );
+  }
+
   onCallWidget() {
     return Expanded(
+      flex: 1,
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 20, vertical: 30),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(30),
+          borderRadius: BorderRadius.only(
+            topLeft: const Radius.circular(60.0),
+            topRight: const Radius.circular(60.0),
+          ),
           color: Color(0xff353336),
         ),
         child: Column(
@@ -411,11 +445,10 @@ class _StartCallState extends State<StartCall> with WidgetsBindingObserver {
           children: [
             timeCalculator(),
             SizedBox(
-              height: 20,
+              height: 30,
             ),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Column(
                   children: [
@@ -464,47 +497,9 @@ class _StartCallState extends State<StartCall> with WidgetsBindingObserver {
                     ),
                   ],
                 ),
-                Spacer(),
-                InkWell(
-                  onTap: () {
-                    engine.startAudioRecording(
-                        "/sdcard/" + room.roomid + ".mp3",
-                        AudioSampleRateType.Type32000,
-                        AudioRecordingQuality.Medium);
-                    setState(() {
-                      recording = !recording;
-                    });
-                  },
-                  child: Column(
-                    children: [
-                      Container(
-                        padding:
-                            EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                        decoration: BoxDecoration(
-                            borderRadius: BorderRadius.all(
-                              Radius.circular(15),
-                            ),
-                            border:
-                                Border.all(width: 1.0, color: Colors.white)),
-                        child: Icon(
-                          CupertinoIcons.mic_fill,
-                          color:
-                              recording == true ? Colors.green : Colors.white,
-                        ),
-                      ),
-                      SizedBox(
-                        height: 10,
-                      ),
-                      Text('Record',
-                          style: TextStyle(
-                              color: recording == true
-                                  ? Colors.green
-                                  : Colors.white,
-                              fontSize: 13)),
-                    ],
-                  ),
+                SizedBox(
+                  width: 40,
                 ),
-                Spacer(),
                 InkWell(
                   onTap: () {
                     engine.setEnableSpeakerphone(!speaker);
@@ -552,9 +547,17 @@ class _StartCallState extends State<StartCall> with WidgetsBindingObserver {
   }
 
   CallButton() {
+    print("CallButton ${room}");
     return SliderButton(
       action: () async {
+
         try {
+          setState(() {
+            callwaiting = false;
+            statustxt = "";
+          });
+
+          print("room ${room}");
           // Get.to(() => Adminmoredetails());
           if (room != null) {
             leaveChannel();
@@ -592,29 +595,47 @@ class _StartCallState extends State<StartCall> with WidgetsBindingObserver {
                 });
               } else {
                 await Database()
-                    .createRoom(userData: user, title: user.username);
+                    .getCallToken(user.uid, "0")
+                    .then((token) async {
+                  if (token != null) {
+                    await roomsRef.doc(user.uid).set(
+                      {
+                        'owner': user.uid,
+                        'title': user.username,
+                        "token": token,
+                        "currentstatus": "off",
+                        "time": callslimit,
+                        "muted": false,
+                        "extendedtime": 0,
+                        "users": [user.toMap()],
+                        "status": "waiting"
+                      },
+                    );
+                    setState(() {
+                      callwaiting = true;
+                      statustxt = "Waiting on call";
+                    });
+                  }
+                });
               }
             });
           }
-
-          // setState(() {
-          //   loading = false;
-          // });
         } catch (e) {
           print("error " + e.toString());
         }
       },
-      alignKnob: callwaiting == true || room != null && room.status == "active"
-          ? Alignment.centerRight
-          : Alignment.centerLeft,
+      alignKnob:
+          callwaiting == true || (room != null && room.status == "active")
+              ? Alignment.centerRight
+              : Alignment.centerLeft,
 
       ///Put label over here
       label: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 30),
         child: Text(
           callwaiting == true || room != null && room.status == "active"
-              ? "Slide to end the call"
-              : "Slide to start the Call",
+              ? "Slide left end the call"
+              : "Slide right start the Call",
           style: TextStyle(
               color: callwaiting == true ? Colors.red : Colors.white,
               fontWeight: FontWeight.w500,
@@ -625,12 +646,8 @@ class _StartCallState extends State<StartCall> with WidgetsBindingObserver {
           ? Alignment.centerLeft
           : Alignment.centerRight,
       icon: Center(
-          child: Icon(
-        Icons.call_end,
-        color: Colors.white,
-        size: 30.0,
-        semanticLabel: 'Text to announce in accessibility modes',
-      )),
+          child: Icon(Icons.call_end,color: Colors.white,)
+      ),
 
       //Put BoxShadow here
       boxShadow: BoxShadow(
@@ -647,10 +664,7 @@ class _StartCallState extends State<StartCall> with WidgetsBindingObserver {
       // height: 80,
       radius: 60,
 
-      buttonColor:
-          callwaiting == true || room != null && room.status == "active"
-              ? Colors.red
-              : Colors.green,
+      buttonColor: callwaiting == true ? Colors.red : Colors.green  ,
       backgroundColor: ThemeColor1,
       highlightedColor: Colors.white,
       dismissible: false,

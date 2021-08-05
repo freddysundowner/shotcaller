@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shotcaller/bindings.dart';
 import 'package:shotcaller/services/authenticate.dart';
+import 'package:shotcaller/splash_screen.dart';
 
 
 
@@ -15,6 +16,7 @@ void main() async {
 }
 
 class MyApp extends StatelessWidget {
+
 
   // This widget is the root of your application.
   @override
@@ -28,7 +30,7 @@ class MyApp extends StatelessWidget {
       ),
 
       initialBinding: AuthBinding(),
-      home: AuthService().handleAuth()
+      home: SplashScreen() //AuthService().handleAuth()
     );
   }
 }

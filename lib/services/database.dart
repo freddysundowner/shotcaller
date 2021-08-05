@@ -19,7 +19,6 @@ class Database {
   Future<UserModel> getUserProfile(String id) async {
     return await usersRef.doc(id).get().then((value) {
       if (value.exists) {
-        print(value.data());
 
         UserModel user = UserModel.fromJson(value.data());
         Get.find<UserController>().user = user;
@@ -66,6 +65,8 @@ class Database {
       "usertype": user.usertype,
       "imageurl": user.imageurl,
       "phonenumber": user.phonenumber,
+      "countrycode": user.countrycode,
+      "countryname": user.countryname,
       "lastAccessTime": DateTime.now().microsecondsSinceEpoch,
     };
     await usersRef.doc(uid).set(data);
@@ -108,26 +109,4 @@ class Database {
     });
   }
 
-  Future<DocumentReference> createRoom({UserModel userData, String title}) async {
-    //GENERATE AGORA TOKEN
-
-    return await getCallToken(userData.uid, "0").then((token) async {
-      if (token != null) {
-        var ref = await roomsRef.add(
-          {
-            'owner': userData.uid,
-            'title': title,
-            "token": token,
-            "currentstatus": "off",
-            "time": 240,
-            "extendedtime": 0,
-            "users": [userData.toMap()],
-            "status": "waiting"
-          },
-        );
-
-        return ref;
-      }
-    });
-  }
 }

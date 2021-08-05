@@ -1,3 +1,4 @@
+import 'package:country_code_picker/country_code_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -6,10 +7,11 @@ import 'package:shotcaller/controllers/controllers.dart';
 import 'package:shotcaller/models/user_model.dart';
 import 'package:shotcaller/services/authenticate.dart';
 import 'package:shotcaller/shared/colors.dart';
+import 'package:shotcaller/utils/utils.dart';
 import 'package:shotcaller/widgets/common_widgets.dart';
+import 'package:shotcaller/widgets/round_button.dart';
 
 import 'otpdart.dart';
-
 
 class PhoneNumber extends StatefulWidget {
   @override
@@ -21,10 +23,13 @@ class PhoneNumber extends StatefulWidget {
 class _PhoneNumberState extends State<PhoneNumber> {
   var _phoneNumberController = TextEditingController();
   bool loading = false;
-  String error="";
+  String error = "";
   Function onSignUpButtonClick;
   UserModel user = Get.put(OnboardingController()).onboardingUser;
   String verificationId;
+  String countrycode;
+  String countryname;
+  final _formKey = GlobalKey<FormState>();
 
   @override
   void initState() {
@@ -36,85 +41,117 @@ class _PhoneNumberState extends State<PhoneNumber> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: ThemeColor1,
-      body: Column(
-        children: <Widget>[
-          SizedBox(
-          height: 50,
+      body: Container(
+        alignment: Alignment.center,
+        padding: const EdgeInsets.only(
+          top: 80,
+          bottom: 60,
         ),
-          logoWidget(sz1: 50 , sz2: 16),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            buildTitle(),
+            SizedBox(
+              height: 50,
+            ),
+            Center(child: buildForm()),
+            SizedBox(
+              height: 10,
+            ),
+            Text(error,style: TextStyle(color: Colors.red),),
+            Spacer(),
+
+            buildBottom(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget buildTitle() {
+    return Text(
+      'Enter your phone #',
+      style: TextStyle(
+        fontSize: 25,
+        color: Colors.white
+      ),
+    );
+  }
+  Widget buildForm() {
+    return Container(
+      width: 330,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          CountryCodePicker(
+            initialSelection: 'US',
+            showCountryOnly: false,
+            alignLeft: false,
+            onInit: (code) {
+              countrycode = code.dialCode;
+              countryname = code.name;
+              user.countrycode = code.dialCode;
+              user.countryname = code.name;
+
+              print("on init ${code.name} ${code.dialCode} ${code.name}");
+            },
+            onChanged: (code){
+              countrycode = code.dialCode;
+              countryname = code.name;
+              user.countrycode = code.dialCode;
+              user.countryname = code.name;
+
+            },
+            padding: const EdgeInsets.all(8),
+            textStyle: TextStyle(
+              fontSize: 20,
+            ),
+          ),
           Expanded(
-            flex: 1,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(40.0),
-                  child: Align(
-                    alignment: Alignment.center,
-                    child: Text(
-                      "Enter your phone number ",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                      ),
-                    ),
+            child: Form(
+              key: _formKey,
+              child: TextFormField(
+                onChanged: (value) {
+                  _formKey.currentState.validate();
+                },
+                validator: (value) {
+                  if (value.isEmpty) {
+                    setState(() {
+                      onSignUpButtonClick = null;
+                    });
+                  } else {
+                    setState(() {
+                      onSignUpButtonClick = signUp;
+                    });
+                  }
+                  return null;
+                },
+                controller: _phoneNumberController,
+                autocorrect: false,
+                autofocus: false,
+                decoration: InputDecoration(
+                  hintText: 'Phone Number',
+                  hintStyle: TextStyle(
+                    fontSize: 20,
                   ),
+                  border: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  errorBorder: InputBorder.none,
+                  disabledBorder: InputBorder.none,
                 ),
-                Container(
-                  width: MediaQuery.of(context).size.width / 1.2,
-                  height: 55,
-                  padding:
-                      EdgeInsets.only(top: 4, left: 16, right: 16, bottom: 4),
-                  decoration: BoxDecoration(
-                      border: Border.all(
-                        color: Colors.white38,  // red as border color
-                      ),
-                      borderRadius: BorderRadius.all(Radius.circular(50)),
-                      color:  Color(0xff5c5d62),
-                   ),
-                  child: TextFormField(
-                    decoration: InputDecoration(
-                      border: InputBorder.none,
-                      hintText: '+1 1234567890',
-                      hintStyle:
-                          TextStyle(fontSize: 20.0, color: Colors.grey),
-                    ),
-                    controller: _phoneNumberController,
-                  ),
-                ), SizedBox(
-                  height: 5,
+                keyboardType: TextInputType.numberWithOptions(
+                    signed: true, decimal: true),
+                style: TextStyle(
+                  fontSize: 20,
+                  color: Colors.black,
+                  fontWeight: FontWeight.w400,
                 ),
-                if(error.isNotEmpty) Text(error,style: TextStyle(color: Colors.red),),
-                SizedBox(
-                  height: 60,
-                ),
-                InkWell(
-                  onTap: loading  == true ?  null : () {
-                    if (_phoneNumberController.text.isNotEmpty) {
-                      signUp();
-                    } else {
-                      setState(() {
-                        error = "enter phone number first";
-                      });
-                    }
-                  },
-                  child: Container(
-                    width: MediaQuery.of(context).size.width / 1.2,
-                    height: 55,
-                    decoration: BoxDecoration(
-                        color: loading == true ? Colors.red[300] : Colors.red,
-                        borderRadius: BorderRadius.all(Radius.circular(50))),
-                    child: Center(
-                      child: Text(
-    loading  == true ? "Please Wait.." : 'Continue'.toUpperCase(),
-                        style: TextStyle(
-                            color: Colors.white, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ],
@@ -122,7 +159,48 @@ class _PhoneNumberState extends State<PhoneNumber> {
     );
   }
 
-
+  Widget buildBottom() {
+    return Column(
+      children: [
+        Text(
+          'By entering your number, you\'re agreeing to our\nTerms or Services and Privacy Policy. Thanks!',
+          style: TextStyle(
+            color: Colors.grey,
+          ),
+        ),
+        SizedBox(
+          height: 30,
+        ),
+        CustomButton(
+          color: Colors.red,
+          minimumWidth: 230,
+          disabledColor: Style.AccentBlue.withOpacity(0.3),
+          onPressed: onSignUpButtonClick,
+          child: Container(
+            width: 100,
+            child: loading == true ? Center(
+              child: CircularProgressIndicator(),
+            ) : Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Next',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_right_alt,
+                  color: Colors.white,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
   Future<void> verifyPhone(phoneNumber) async {
     final PhoneVerificationCompleted verified = (AuthCredential authResult) {
       AuthService().signIn(context, authResult);
@@ -143,7 +221,9 @@ class _PhoneNumberState extends State<PhoneNumber> {
         loading = false;
         error = "Technical error happened";
       });
-      Get.offAll(OtpScreen(verificationId: this.verificationId,));
+      Get.offAll(OtpScreen(
+        verificationId: this.verificationId,
+      ));
     };
 
     final PhoneCodeAutoRetrievalTimeout autoTimeout = (String verId) {
@@ -152,7 +232,7 @@ class _PhoneNumberState extends State<PhoneNumber> {
 
     await FirebaseAuth.instance.verifyPhoneNumber(
 
-      /// Make sure to prefix with your country code
+        /// Make sure to prefix with your country code
         phoneNumber: phoneNumber,
 
         ///No duplicated SMS will be sent out upon re-entry (before timeout).
@@ -173,19 +253,17 @@ class _PhoneNumberState extends State<PhoneNumber> {
         codeAutoRetrievalTimeout: autoTimeout);
   }
 
-
   signUp() {
-    if(_phoneNumberController.text.isEmpty){
+    if (_phoneNumberController.text.isEmpty) {
       setState(() {
         error = "Enter Phone Number";
       });
-    }else{
+    } else {
       setState(() {
         loading = true;
         error = "";
       });
-      verifyPhone(_phoneNumberController.text);
+      verifyPhone(countrycode+_phoneNumberController.text);
     }
-
   }
 }
