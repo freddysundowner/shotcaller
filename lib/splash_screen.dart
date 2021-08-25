@@ -24,7 +24,7 @@ class _SplashScreenState extends State<SplashScreen> {
    @override
    void initState() {
      _controller = VideoPlayerController.asset(
-       'assets/videos/video.mp4',
+       'assets/videos/vv.mp4',
      );
 
      _initializeVideoPlayerFuture = _controller.initialize();
@@ -87,10 +87,13 @@ class _SplashScreenState extends State<SplashScreen> {
 
           // If the VideoPlayerController has finished initialization, use
           // the data it provides to limit the aspect ratio of the video.
-          return AspectRatio(
-            aspectRatio: _controller.value.aspectRatio,
-            // Use the VideoPlayer widget to display the video.
-            child: VideoPlayer(_controller),
+          return Container(
+            color: Colors.black,
+            child: AspectRatio(
+              aspectRatio: _controller.value.size.width,
+              // Use the VideoPlayer widget to display the video.
+              child: VideoPlayer(_controller),
+            ),
           );
         } else {
           // If the VideoPlayerController is still initializing, show a

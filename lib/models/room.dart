@@ -4,7 +4,10 @@ class Room {
   final List<UserModel> users;
   final String roomid;
   final String owner;
-  final bool muted;
+  final bool usermuted;
+  final bool adminmuted;
+  final bool adminenabledspeaker;
+  final bool userenabledspeaker;
   final String currentstatus;
   final int time;
   final int extendedtime;
@@ -14,7 +17,10 @@ class Room {
 
   Room({
     this.token,
-    this.muted,
+    this.usermuted,
+    this.adminmuted,
+    this.userenabledspeaker,
+    this.adminenabledspeaker,
     this.currentstatus,
     this.extendedtime,
     this.owner,
@@ -30,7 +36,10 @@ class Room {
     var json  = doc.data();
     return Room(
       title: json['title'],
-      muted: json['muted'] ?? false,
+      usermuted: json['usermuted'] ?? false,
+      adminmuted: json['adminmuted'] ?? false,
+      userenabledspeaker: json['userenabledspeaker'] ?? true,
+      adminenabledspeaker: json['adminenabledspeaker'] ?? true,
       currentstatus: json['currentstatus'],
       owner: json['owner'],
       time: json['time'],

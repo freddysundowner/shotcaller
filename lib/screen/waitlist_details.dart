@@ -18,7 +18,7 @@ class _WaitlistDetailsState extends State<WaitlistDetails> {
         padding: EdgeInsets.symmetric(horizontal: 20,vertical: 30),
         child: Column(
           children: <Widget>[
-            logoWidget(),
+            logoWidget(sz1: 200,sz2: 300),
             SizedBox(
               height: 50,
             ),

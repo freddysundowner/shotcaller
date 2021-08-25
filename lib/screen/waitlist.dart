@@ -1,7 +1,14 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:shotcaller/controllers/controllers.dart';
+import 'package:shotcaller/screen/admin_screen.dart';
+import 'package:shotcaller/screen/phone_number.dart';
 import 'package:shotcaller/screen/startcall_screen.dart';
+import 'package:shotcaller/screen/username_page.dart';
 import 'package:shotcaller/screen/waitlist_details.dart';
+import 'package:shotcaller/services/database.dart';
 import 'package:shotcaller/shared/colors.dart';
 import 'package:shotcaller/widgets/common_widgets.dart';
 
@@ -21,26 +28,23 @@ class _WaitlistState extends State<Waitlist> {
             padding: EdgeInsets.symmetric(horizontal: 20),
             child: Column(
               children: <Widget>[
-                SizedBox(height: 30),
+                SizedBox(height: 60),
                 Image.asset(
-                  'assets/vv.png',
+                  'assets/images/vv.png',
                   height: MediaQuery.of(context).size.height / 3,
                   fit: BoxFit.cover,
                 ),
                 SizedBox(
                   height: 40,
                 ),
-                logoWidget(),
+                logoWidget(sz2: 150, sz1: 200),
                 SizedBox(
                   height: 40,
                 ),
                 Center(
                   child: Text(
                     'Are you a broadcaster or podcaster? \nJoin our wait list to be notified when shortcaller is offered to creators',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16
-                    ),
+                    style: TextStyle(color: Colors.white, fontSize: 16),
                     textAlign: TextAlign.center,
                   ),
                 ),
@@ -79,10 +83,22 @@ class _WaitlistState extends State<Waitlist> {
                 ),
                 InkWell(
                   onTap: () {
-                    Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) => StartCall()));
+                    if(FirebaseAuth.instance.currentUser == null) Get.to(() => PhoneNumber());
+                    Database()
+                        .getUserProfile(FirebaseAuth.instance.currentUser.uid)
+                        .then((value) {
+                      if (value != null) {
+                        Get.put(UserController()).user = value;
+                        if (Get.put(UserController()).user.usertype ==
+                            "admin") {
+                          Get.to(() => Admin());
+                        } else {
+                          Get.to(() => StartCall());
+                        }
+                      } else {
+                        Get.to(() => UsernamePage());
+                      }
+                    });
                   },
                   child: Container(
                     width: 200,

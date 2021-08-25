@@ -246,7 +246,7 @@ class _CircularPercentIndicatorState extends State<CircularPercentIndicator>
           children: [
             CustomPaint(
               painter: CirclePainter(
-                progress: _percent * (360/widget.totaltime),
+                progress: _percent,
                 progressColor: widget.progressColor,
                 backgroundColor: widget.backgroundColor,
                 startAngle: widget.startAngle,

@@ -162,10 +162,16 @@ class _PhoneNumberState extends State<PhoneNumber> {
   Widget buildBottom() {
     return Column(
       children: [
-        Text(
-          'By entering your number, you\'re agreeing to our\nTerms or Services and Privacy Policy. Thanks!',
-          style: TextStyle(
-            color: Colors.grey,
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Text(
+            'By entering your number, you are agreeing to \nour Terms or Services and Privacy Policy',
+            style: TextStyle(
+              color: Colors.grey,
+              fontSize: 12,
+                height: 1.5
+            ),
+            textAlign: TextAlign.center,
           ),
         ),
         SizedBox(

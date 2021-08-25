@@ -10,6 +10,7 @@ import 'package:http/io_client.dart';
 import 'package:shotcaller/controllers/controllers.dart';
 import 'package:shotcaller/models/user_model.dart';
 import 'package:shotcaller/screen/startcall_screen.dart';
+import 'package:shotcaller/screen/waitlist.dart';
 import 'package:shotcaller/shared/configs.dart';
 import 'package:shotcaller/utils/firebase_refs.dart';
 import 'package:path/path.dart';
@@ -40,12 +41,22 @@ class Database {
       await uploadTask.whenComplete(() async {
         String storagePath = await firebaseSt.getDownloadURL();
         user.imageurl = storagePath;
+        updateProfileData(id, {
+          "imageurl": storagePath
+        });
       });
 
       if (update == true) {
+        String link = Get.find<UserController>().user.imageurl;
+        link =  link.split("/")[7];
+        link = link.replaceAll("%20"," ");
+        link = link.replaceAll("%2C", ",");
+        link = link.substring(0, link.indexOf('.jpg'));
+        link = link.replaceAll("%2F", "/");
+
         Reference storageReferance = FirebaseStorage.instance.ref();
         storageReferance
-            .child(Get.find<UserController>().user.imageurl)
+            .child("/"+link+".jpg")
             .delete()
             .then((_) => print(
                 'Successfully deleted ${Get.find<UserController>().user.imageurl} storage item'));
@@ -72,7 +83,7 @@ class Database {
     await usersRef.doc(uid).set(data);
     UserModel userModel = await Database().getUserProfile(FirebaseAuth.instance.currentUser.uid);
     if(userModel != null){
-      Get.to(() => StartCall());
+      Get.to(() => Waitlist());
     }
   }
 
