@@ -96,7 +96,7 @@ class _OtpScreenState extends State<OtpScreen> {
                   ),
                   Center(
                     child: Text(
-                      "We sent OTP  code to verify your number",
+                      "We sent OTP code to verify your number",
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 15,

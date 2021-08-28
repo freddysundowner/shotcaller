@@ -349,220 +349,350 @@ class _StartCallState extends State<StartCall> with WidgetsBindingObserver {
     return Scaffold(
         resizeToAvoidBottomInset: true,
         backgroundColor: ThemeColor1,
-        body: SingleChildScrollView(
-          child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: <Widget>[
-                SizedBox(
-                  height: 20,
-                ),
-                logoWidget(sz1: 200, sz2: 16, from: "home"),
-                SizedBox(
-                  height: 30,
-                ),
-                Row(
+        body: CustomScrollView(
+          slivers: [
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    InkWell(
-                      onTap: () {
-                        _showMyDialog();
-                      },
-                      child: _imageFile != null
-                          ? Container(
-                              child: ClipOval(
-                                child: Image.file(
-                                  _imageFile,
-                                  height: 50,
-                                  width: 50,
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
-                            )
-                          : Container(
-                              decoration: BoxDecoration(
-                                borderRadius:
-                                    BorderRadius.circular(20),
-                              ),
-                              child: user.imageurl != null
-                                  ? ClipRRect(
-                                      borderRadius:
-                                          BorderRadius.circular(60.0),
-                                      child: CachedNetworkImage(
-                                        width: 50,
-                                        imageUrl: user.imageurl,
-                                      ),
-                                    )
-                                  : Icon(
-                                      Icons.person,
-                                      size: 30,
-                                    )),
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.max,
+                  children: <Widget>[
+                    SizedBox(
+                      height: 20,
+                    ),
+                    logoWidget(sz1: 200, sz2: 16, from: "home"),
+                    SizedBox(
+                      height: 30,
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        InkWell(
+                          onTap: () {
+                            _showMyDialog();
+                          },
+                          child: _imageFile != null
+                              ? Container(
+                                  child: ClipOval(
+                                    child: Image.file(
+                                      _imageFile,
+                                      height: 50,
+                                      width: 50,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
+                                )
+                              : Container(
+                                  decoration: BoxDecoration(
+                                    borderRadius:
+                                        BorderRadius.circular(20),
+                                  ),
+                                  child: user.imageurl != null
+                                      ? ClipRRect(
+                                          borderRadius:
+                                              BorderRadius.circular(60.0),
+                                          child: CachedNetworkImage(
+                                            width: 50,
+                                            imageUrl: user.imageurl,
+                                          ),
+                                        )
+                                      : Icon(
+                                          Icons.person,
+                                          size: 30,
+                                        )),
+                        ),
+                        SizedBox(
+                          width: 20,
+                        ),
+                        TextButton.icon(
+                            onPressed: () {
+                              _showUsernameDialog();
+                            },
+                            icon: Icon(Icons.edit),
+                            label: Text(
+                              (statustxt == null && statustxt.isNotEmpty
+                                  ? statustxt + "..."
+                                  : user.username),
+                              style: TextStyle(
+                                  color: Color(0xffB8B8B8),
+                                  fontSize: 24,
+                                  fontFamily: "InterExtraBold"),
+                            )),
+                      ],
                     ),
                     SizedBox(
-                      width: 20,
+                      height: 10,
                     ),
-                    TextButton.icon(
-                        onPressed: () {
-                          _showUsernameDialog();
-                        },
-                        icon: Icon(Icons.edit),
-                        label: Text(
-                          (statustxt == null && statustxt.isNotEmpty
-                              ? statustxt + "..."
-                              : user.username),
-                          style: TextStyle(
-                              color: Color(0xffB8B8B8),
-                              fontSize: 24,
-                              fontFamily: "InterExtraBold"),
-                        )),
-                  ],
-                ),
-                SizedBox(
-                  height: 10,
-                ),
-                Stack(
-                  children: [
-                    Center(
-                      child: CircularPercentIndicator(
-                        radius: 200,
-                        startAngle: 360,
-                        animateFromLastPercent: true,
-                        animation: true,
-                        totaltime: room == null
-                            ? 240.0
-                            : room.time.toDouble(),
-                        animationDuration: 1200,
-                        addAutomaticKeepAlive: true,
-                        lineWidth: 20.0,
-                        percent: room != null && room.time != null
-                            ? (currentSeconds / room.time * 360)
-                            : 0,
-                        center: Image.asset(
-                          'assets/images/soul_logo.png',
-                          width: 140,
-                          fit: BoxFit.cover,
+                    Stack(
+                      children: [
+                        Center(
+                          child: CircularPercentIndicator(
+                            radius: 200,
+                            startAngle: 360,
+                            animateFromLastPercent: true,
+                            animation: true,
+                            totaltime: room == null
+                                ? 240.0
+                                : room.time.toDouble(),
+                            animationDuration: 1200,
+                            addAutomaticKeepAlive: true,
+                            lineWidth: 20.0,
+                            percent: room != null && room.time != null
+                                ? (currentSeconds / room.time * 360)
+                                : 0,
+                            center: Image.asset(
+                              'assets/images/soul_logo.png',
+                              width: 140,
+                              fit: BoxFit.cover,
+                            ),
+                            circularStrokeCap: CircularStrokeCap.round,
+                            backgroundColor: Colors.grey,
+                            progressColor:
+                                checkLimitsColors(room, currentSeconds),
+                          ),
                         ),
-                        circularStrokeCap: CircularStrokeCap.round,
-                        backgroundColor: Colors.grey,
-                        progressColor:
-                            checkLimitsColors(room, currentSeconds),
-                      ),
-                    ),
-                    if (showlink.isNotEmpty)
-                      Positioned(
-                        child: InkWell(
-                            onTap: () async {
-                              showDialog(
-                                context: context,
-                                barrierDismissible: false,
-                                // user must tap button!
-                                builder: (BuildContext context) {
-                                  return AlertDialog(
-                                    content: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Container(
-                                          child: DefaultTextStyle(
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .title,
-                                            child: RichWidget(
-                                              showlinkname:
-                                                  showlinkname,
-                                            ),
-                                          ),
-                                        ),
-                                        SizedBox(
-                                          height: 30,
-                                        ),
-                                        Row(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.end,
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.end,
+                        if (showlink.isNotEmpty)
+                          Positioned(
+                            child: InkWell(
+                                onTap: () async {
+                                  showDialog(
+                                    context: context,
+                                    barrierDismissible: false,
+                                    // user must tap button!
+                                    builder: (BuildContext context) {
+                                      return AlertDialog(
+                                        content: Column(
+                                          mainAxisSize: MainAxisSize.min,
                                           children: [
-                                            InkWell(
-                                              child: Container(
-                                                padding: EdgeInsets
-                                                    .symmetric(
-                                                        vertical: 5,
-                                                        horizontal:
-                                                            10),
-                                                child: Text(
-                                                  'Continue',
-                                                  style: TextStyle(
-                                                      color: Colors
-                                                          .white),
+                                            Container(
+                                              child: DefaultTextStyle(
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .title,
+                                                child: RichWidget(
+                                                  showlinkname:
+                                                      showlinkname,
                                                 ),
-                                                decoration: BoxDecoration(
-                                                    color: Color(
-                                                        0XFF5761E3),
-                                                    borderRadius:
-                                                        BorderRadius
-                                                            .circular(
-                                                                20)),
                                               ),
-                                              onTap: () async {
-                                                String url = showlink;
-                                                if (await canLaunch(
-                                                    url))
-                                                  await launch(url);
-                                                else
-                                                  // can't launch url, there is some error
-                                                  throw "Could not launch $url";
-                                              },
                                             ),
                                             SizedBox(
-                                              width: 30,
+                                              height: 30,
                                             ),
-                                            InkWell(
-                                              child: Container(
-                                                padding: EdgeInsets
-                                                    .symmetric(
-                                                        vertical: 5,
-                                                        horizontal:
-                                                            10),
-                                                child: Text(
-                                                  'Cancel',
-                                                  style: TextStyle(
-                                                      color: Colors
-                                                          .white),
+                                            Row(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.end,
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.end,
+                                              children: [
+                                                InkWell(
+                                                  child: Container(
+                                                    padding: EdgeInsets
+                                                        .symmetric(
+                                                            vertical: 5,
+                                                            horizontal:
+                                                                10),
+                                                    child: Text(
+                                                      'Continue',
+                                                      style: TextStyle(
+                                                          color: Colors
+                                                              .white),
+                                                    ),
+                                                    decoration: BoxDecoration(
+                                                        color: Color(
+                                                            0XFF5761E3),
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(
+                                                                    20)),
+                                                  ),
+                                                  onTap: () async {
+                                                    String url = showlink;
+                                                    if (await canLaunch(
+                                                        url))
+                                                      await launch(url);
+                                                    else
+                                                      // can't launch url, there is some error
+                                                      throw "Could not launch $url";
+                                                  },
                                                 ),
-                                                decoration: BoxDecoration(
-                                                    color: Color(
-                                                        0XFF595959),
-                                                    borderRadius:
-                                                        BorderRadius
-                                                            .circular(
-                                                                20)),
-                                              ),
-                                              onTap: () async {
-                                                Navigator.pop(
-                                                    context);
-                                              },
-                                            ),
+                                                SizedBox(
+                                                  width: 30,
+                                                ),
+                                                InkWell(
+                                                  child: Container(
+                                                    padding: EdgeInsets
+                                                        .symmetric(
+                                                            vertical: 5,
+                                                            horizontal:
+                                                                10),
+                                                    child: Text(
+                                                      'Cancel',
+                                                      style: TextStyle(
+                                                          color: Colors
+                                                              .white),
+                                                    ),
+                                                    decoration: BoxDecoration(
+                                                        color: Color(
+                                                            0XFF595959),
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(
+                                                                    20)),
+                                                  ),
+                                                  onTap: () async {
+                                                    Navigator.pop(
+                                                        context);
+                                                  },
+                                                ),
+                                              ],
+                                            )
                                           ],
-                                        )
-                                      ],
-                                    ),
+                                        ),
+                                      );
+                                    },
                                   );
                                 },
-                              );
-                            },
-                            child: Icon(Icons.info)),
-                        top: 0,
-                        right: 80,
-                      )
-                  ],
-                ),
-                SizedBox(
-                  height: 30,
-                ),
-                // if (callwaiting == true || room == null)
-                //   onWaitingCallWidget(),
-                // if (callwaiting == false && room != null)
-                  onCallWidget(),
-              ]),
+                                child: Icon(Icons.info)),
+                            top: 0,
+                            right: 80,
+                          )
+                      ],
+                    ),
+                    SizedBox(
+                      height: 30,
+                    ),
+                    Expanded(
+                      child: Container(
+                        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 30),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.only(
+                            topLeft: const Radius.circular(20.0),
+                            topRight: const Radius.circular(20.0),
+                          ),
+                          color: Color(0xff353336),
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                children: [
+                                  SizedBox(
+                                    height: 60,
+                                  ),
+                                  timeCalculator(),
+                                  SizedBox(
+                                    height: 20,
+                                  ),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: <Widget>[
+                                      Column(
+                                        children: [
+                                          InkWell(
+                                            onTap: room ==null ? null : () {
+                                              print("mute");
+                                              engine.muteLocalAudioStream(!room.usermuted);
+                                              roomsRef
+                                                  .doc(room.roomid)
+                                                  .update({"usermuted": !room.usermuted});
+                                            },
+                                            child: Column(
+                                              children: [
+                                                Container(
+                                                  padding: EdgeInsets.symmetric(
+                                                      horizontal: 10, vertical: 10),
+                                                  decoration: BoxDecoration(
+                                                      borderRadius: BorderRadius.all(
+                                                        Radius.circular(15),
+                                                      ),
+                                                      border: Border.all(
+                                                          width: 1.0, color: Colors.white)),
+                                                  child: room !=null && room.usermuted == true
+                                                      ? Icon(
+                                                    CupertinoIcons.speaker_slash_fill,
+                                                    color: Colors.white,
+                                                  )
+                                                      : Icon(
+                                                    CupertinoIcons.speaker_1_fill,
+                                                    color: room !=null && room.usermuted == true
+                                                        ? Colors.green
+                                                        : Colors.white,
+                                                  ),
+                                                ),
+                                                SizedBox(
+                                                  height: 10,
+                                                ),
+                                                Text('mute',
+                                                    style: TextStyle(
+                                                        color: room !=null && room.usermuted == true
+                                                            ? Colors.green
+                                                            : Colors.white,
+                                                        fontSize: 13)),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      SizedBox(
+                                        width: 30,
+                                      ),
+                                      InkWell(
+                                        onTap: room ==null ? null : () {
+                                          engine.setEnableSpeakerphone(!room.userenabledspeaker);
+                                          roomsRef.doc(room.roomid).update(
+                                              {"userenabledspeaker": !room.userenabledspeaker});
+                                        },
+                                        child: Column(
+                                          children: [
+                                            Container(
+                                              padding:
+                                              EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                                              decoration: BoxDecoration(
+                                                  borderRadius: BorderRadius.all(
+                                                    Radius.circular(15),
+                                                  ),
+                                                  border:
+                                                  Border.all(width: 1.0, color: Colors.white)),
+                                              child: Icon(
+                                                CupertinoIcons.speaker_3,
+                                                color: room !=null && room.userenabledspeaker == true
+                                                    ? Colors.green
+                                                    : Colors.white,
+                                              ),
+                                            ),
+                                            SizedBox(
+                                              height: 10,
+                                            ),
+                                            Text('Speaker',
+                                                style: TextStyle(
+                                                    color: room !=null && room.userenabledspeaker == true
+                                                        ? Colors.green
+                                                        : Colors.white,
+                                                    fontSize: 13)),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  SizedBox(
+                                    height: 30,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            CallButton(),
+                            SizedBox(
+                              height: 80,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ]),
+            ),
+          ],
         ));
   }
 
@@ -659,118 +789,121 @@ class _StartCallState extends State<StartCall> with WidgetsBindingObserver {
   }
 
   onCallWidget() {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 30),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.only(
-          topLeft: const Radius.circular(20.0),
-          topRight: const Radius.circular(20.0),
-        ),
-        color: Color(0xff353336),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          timeCalculator(),
-          SizedBox(
-            height: 20,
+    return Expanded(
+      flex: 1,
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 30),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.only(
+            topLeft: const Radius.circular(20.0),
+            topRight: const Radius.circular(20.0),
           ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-              Column(
-                children: [
-                  InkWell(
-                    onTap: room ==null ? null : () {
-                      print("mute");
-                      engine.muteLocalAudioStream(!room.usermuted);
-                      roomsRef
-                          .doc(room.roomid)
-                          .update({"usermuted": !room.usermuted});
-                    },
-                    child: Column(
-                      children: [
-                        Container(
-                          padding: EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 10),
-                          decoration: BoxDecoration(
-                              borderRadius: BorderRadius.all(
-                                Radius.circular(15),
-                              ),
-                              border: Border.all(
-                                  width: 1.0, color: Colors.white)),
-                          child: room !=null && room.usermuted == true
-                              ? Icon(
-                                  CupertinoIcons.speaker_slash_fill,
-                                  color: Colors.white,
-                                )
-                              : Icon(
-                                  CupertinoIcons.speaker_1_fill,
+          color: Color(0xff353336),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            timeCalculator(),
+            SizedBox(
+              height: 20,
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                Column(
+                  children: [
+                    InkWell(
+                      onTap: room ==null ? null : () {
+                        print("mute");
+                        engine.muteLocalAudioStream(!room.usermuted);
+                        roomsRef
+                            .doc(room.roomid)
+                            .update({"usermuted": !room.usermuted});
+                      },
+                      child: Column(
+                        children: [
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 10),
+                            decoration: BoxDecoration(
+                                borderRadius: BorderRadius.all(
+                                  Radius.circular(15),
+                                ),
+                                border: Border.all(
+                                    width: 1.0, color: Colors.white)),
+                            child: room !=null && room.usermuted == true
+                                ? Icon(
+                                    CupertinoIcons.speaker_slash_fill,
+                                    color: Colors.white,
+                                  )
+                                : Icon(
+                                    CupertinoIcons.speaker_1_fill,
+                                    color: room !=null && room.usermuted == true
+                                        ? Colors.green
+                                        : Colors.white,
+                                  ),
+                          ),
+                          SizedBox(
+                            height: 10,
+                          ),
+                          Text('mute',
+                              style: TextStyle(
                                   color: room !=null && room.usermuted == true
                                       ? Colors.green
                                       : Colors.white,
-                                ),
-                        ),
-                        SizedBox(
-                          height: 10,
-                        ),
-                        Text('mute',
-                            style: TextStyle(
-                                color: room !=null && room.usermuted == true
-                                    ? Colors.green
-                                    : Colors.white,
-                                fontSize: 13)),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(
-                width: 30,
-              ),
-              InkWell(
-                onTap: room ==null ? null : () {
-                  engine.setEnableSpeakerphone(!room.userenabledspeaker);
-                  roomsRef.doc(room.roomid).update(
-                      {"userenabledspeaker": !room.userenabledspeaker});
-                },
-                child: Column(
-                  children: [
-                    Container(
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                      decoration: BoxDecoration(
-                          borderRadius: BorderRadius.all(
-                            Radius.circular(15),
-                          ),
-                          border:
-                              Border.all(width: 1.0, color: Colors.white)),
-                      child: Icon(
-                        CupertinoIcons.speaker_3,
-                        color: room !=null && room.userenabledspeaker == true
-                            ? Colors.green
-                            : Colors.white,
+                                  fontSize: 13)),
+                        ],
                       ),
                     ),
-                    SizedBox(
-                      height: 10,
-                    ),
-                    Text('Speaker',
-                        style: TextStyle(
-                            color: room !=null && room.userenabledspeaker == true
-                                ? Colors.green
-                                : Colors.white,
-                            fontSize: 13)),
                   ],
                 ),
-              ),
-            ],
-          ),
-          SizedBox(
-            height: 30,
-          ),
-          CallButton()
-        ],
+                SizedBox(
+                  width: 30,
+                ),
+                InkWell(
+                  onTap: room ==null ? null : () {
+                    engine.setEnableSpeakerphone(!room.userenabledspeaker);
+                    roomsRef.doc(room.roomid).update(
+                        {"userenabledspeaker": !room.userenabledspeaker});
+                  },
+                  child: Column(
+                    children: [
+                      Container(
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                        decoration: BoxDecoration(
+                            borderRadius: BorderRadius.all(
+                              Radius.circular(15),
+                            ),
+                            border:
+                                Border.all(width: 1.0, color: Colors.white)),
+                        child: Icon(
+                          CupertinoIcons.speaker_3,
+                          color: room !=null && room.userenabledspeaker == true
+                              ? Colors.green
+                              : Colors.white,
+                        ),
+                      ),
+                      SizedBox(
+                        height: 10,
+                      ),
+                      Text('Speaker',
+                          style: TextStyle(
+                              color: room !=null && room.userenabledspeaker == true
+                                  ? Colors.green
+                                  : Colors.white,
+                              fontSize: 13)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(
+              height: 30,
+            ),
+            CallButton()
+          ],
+        ),
       ),
     );
   }

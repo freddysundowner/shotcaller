@@ -1,5 +1,6 @@
 import 'package:country_code_picker/country_code_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -10,6 +11,7 @@ import 'package:shotcaller/shared/colors.dart';
 import 'package:shotcaller/utils/utils.dart';
 import 'package:shotcaller/widgets/common_widgets.dart';
 import 'package:shotcaller/widgets/round_button.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'otpdart.dart';
 
@@ -59,9 +61,11 @@ class _PhoneNumberState extends State<PhoneNumber> {
             SizedBox(
               height: 10,
             ),
-            Text(error,style: TextStyle(color: Colors.red),),
+            Text(
+              error,
+              style: TextStyle(color: Colors.red),
+            ),
             Spacer(),
-
             buildBottom(),
           ],
         ),
@@ -72,12 +76,10 @@ class _PhoneNumberState extends State<PhoneNumber> {
   Widget buildTitle() {
     return Text(
       'Enter your phone #',
-      style: TextStyle(
-        fontSize: 25,
-        color: Colors.white
-      ),
+      style: TextStyle(fontSize: 25, color: Colors.white),
     );
   }
+
   Widget buildForm() {
     return Container(
       width: 330,
@@ -99,12 +101,11 @@ class _PhoneNumberState extends State<PhoneNumber> {
 
               print("on init ${code.name} ${code.dialCode} ${code.name}");
             },
-            onChanged: (code){
+            onChanged: (code) {
               countrycode = code.dialCode;
               countryname = code.name;
               user.countrycode = code.dialCode;
               user.countryname = code.name;
-
             },
             padding: const EdgeInsets.all(8),
             textStyle: TextStyle(
@@ -163,17 +164,18 @@ class _PhoneNumberState extends State<PhoneNumber> {
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Text(
-            'By entering your number, you are agreeing to \nour Terms or Services and Privacy Policy',
-            style: TextStyle(
-              color: Colors.grey,
-              fontSize: 12,
-                height: 1.5
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: RichWidget()
+            // Text(
+            //         'By entering your number, you are agreeing to \nour Terms of Services and Privacy Policy',
+            //         style: TextStyle(
+            //           color: Colors.grey,
+            //           fontSize: 12,
+            //             height: 1.5
+            //         ),
+            //         textAlign: TextAlign.center,
+            //       ),
             ),
-            textAlign: TextAlign.center,
-          ),
-        ),
         SizedBox(
           height: 30,
         ),
@@ -184,29 +186,34 @@ class _PhoneNumberState extends State<PhoneNumber> {
           onPressed: onSignUpButtonClick,
           child: Container(
             width: 100,
-            child: loading == true ? Center(
-              child: CircularProgressIndicator(),
-            ) : Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Next',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
+            child: loading == true
+                ? Center(
+                    child: CircularProgressIndicator(),
+                  )
+                : Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Next',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                        ),
+                      ),
+                      Icon(
+                        Icons.arrow_right_alt,
+                        color: Colors.white,
+                      ),
+                    ],
                   ),
-                ),
-                Icon(
-                  Icons.arrow_right_alt,
-                  color: Colors.white,
-                ),
-              ],
-            ),
           ),
         ),
       ],
     );
   }
+
+
+
   Future<void> verifyPhone(phoneNumber) async {
     final PhoneVerificationCompleted verified = (AuthCredential authResult) {
       AuthService().signIn(context, authResult);
@@ -269,7 +276,48 @@ class _PhoneNumberState extends State<PhoneNumber> {
         loading = true;
         error = "";
       });
-      verifyPhone(countrycode+_phoneNumberController.text);
+      verifyPhone(countrycode + _phoneNumberController.text);
     }
+  }
+}
+
+class RichWidget extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return RichText(
+      textAlign: TextAlign.center,
+      text: TextSpan(
+        text: 'By entering your number, you are agreeing to our ',
+        style: DefaultTextStyle.of(context).style,
+        children: <TextSpan>[
+          TextSpan(
+              recognizer: new TapGestureRecognizer()..onTap = () async{
+                String url = "https://799f0fbe-b3f6-4b9a-a0b3-178374bb4265.filesusr.com/ugd/1a8777_214fe701c4d74c228eed327114061df9.pdf";
+                if (await canLaunch(
+                url))
+                await launch(url);
+                else
+                // can't launch url, there is some error
+                throw "Could not launch $url";
+              },
+              text: 'Terms of Services ',
+              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue[100])),
+
+          TextSpan(text: ' and '),
+          TextSpan(
+              recognizer: new TapGestureRecognizer()..onTap = () async {
+                String url = "https://799f0fbe-b3f6-4b9a-a0b3-178374bb4265.filesusr.com/ugd/1a8777_3dcc226aa85b40b0889216139d13a46d.pdf";
+                if (await canLaunch(
+                url))
+                await launch(url);
+                else
+                // can't launch url, there is some error
+                throw "Could not launch $url";
+              },
+              text: 'Privacy Policy',
+              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue[100])),
+        ],
+      ),
+    );
   }
 }
